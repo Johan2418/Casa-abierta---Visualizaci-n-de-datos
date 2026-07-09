@@ -1,0 +1,42 @@
+# Node dependencies
+node_modules/
+
+# Build outputs
+/dist/
+/build/
+
+# Vite / cache
+/.vite/
+
+# Environment files (keep out of repo)
+.env
+.env.local
+.env.*.local
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/
+.idea/
+.history/
+
+# Test coverage
+coverage/
+.nyc_output/
+
+# Misc
+.cache/
+.sass-cache/
+*.tgz
+
+# PnP (Yarn)
+.pnp
+.pnp.js
