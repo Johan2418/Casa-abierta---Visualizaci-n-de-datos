@@ -246,26 +246,52 @@ select {
   font-size: 14px;
 }
 
-.fullscreen-toggle {
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   pointer-events: auto;
-  width: 40px;
+}
+
+.fullscreen-toggle,
+.auto-advance-toggle {
+  pointer-events: auto;
   height: 40px;
   border: 1px solid var(--border);
   background: rgba(8, 18, 15, 0.65);
   color: #fff;
   border-radius: 8px;
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   cursor: pointer;
   transition: border-color 200ms ease, box-shadow 200ms ease;
 }
 
-.fullscreen-toggle:hover {
+.fullscreen-toggle {
+  width: 40px;
+}
+
+.auto-advance-toggle {
+  gap: 8px;
+  padding: 0 13px 0 11px;
+  font: 800 12px Archivo, sans-serif;
+  letter-spacing: 0;
+}
+
+.fullscreen-toggle:hover,
+.auto-advance-toggle:hover,
+.auto-advance-toggle.is-active {
   border-color: var(--accent);
   box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 35%, transparent);
 }
 
-.fullscreen-toggle svg {
+.auto-advance-toggle.is-active {
+  background: color-mix(in srgb, var(--accent) 16%, rgba(8, 18, 15, 0.65));
+}
+
+.fullscreen-toggle svg,
+.auto-advance-toggle svg {
   width: 18px;
   height: 18px;
   stroke: currentColor;
@@ -273,6 +299,20 @@ select {
   fill: none;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.auto-advance-toggle svg {
+  stroke: none;
+  fill: currentColor;
+}
+
+.auto-advance-toggle .auto-icon-pause,
+.auto-advance-toggle.is-active .auto-icon-play {
+  display: none;
+}
+
+.auto-advance-toggle.is-active .auto-icon-pause {
+  display: block;
 }
 
 .fullscreen-toggle .icon-collapse {
@@ -285,33 +325,6 @@ select {
 
 .fullscreen-toggle.is-fullscreen .icon-collapse {
   display: block;
-}
-
-.attract-badge {
-  position: fixed;
-  z-index: 40;
-  top: 92px;
-  left: 50%;
-  transform: translateX(-50%);
-  padding: 9px 18px;
-  border-radius: 999px;
-  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
-  background: rgba(3, 9, 8, 0.82);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-body.is-attract {
-  cursor: none;
-}
-
-body.is-attract .attract-badge {
-  visibility: visible;
 }
 
 .deck-track {
@@ -523,7 +536,7 @@ h1 .word-inner {
   left: 50%;
   transform: translateX(-50%);
   display: grid;
-  grid-template-columns: auto minmax(180px, 34vw) auto;
+  grid-template-columns: minmax(180px, 34vw) auto;
   gap: 18px;
   align-items: center;
   color: var(--muted);
@@ -1393,6 +1406,20 @@ input[type='range']::-moz-range-thumb {
     display: none;
   }
 
+  .auto-advance-toggle {
+    width: 40px;
+    padding: 0;
+  }
+
+  .auto-advance-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
   .slide {
     padding: 78px 22px 84px;
     grid-template-columns: 1fr;
@@ -1439,7 +1466,7 @@ input[type='range']::-moz-range-thumb {
 
   .deck-progress {
     width: calc(100vw - 34px);
-    grid-template-columns: auto 1fr;
+    grid-template-columns: 1fr;
   }
 
   .dots {
@@ -1467,12 +1494,6 @@ input[type='range']::-moz-range-thumb {
 
   .inspector {
     display: none;
-  }
-
-  .attract-badge {
-    top: 70px;
-    font-size: 12px;
-    padding: 7px 14px;
   }
 
   .conclusions-layout {

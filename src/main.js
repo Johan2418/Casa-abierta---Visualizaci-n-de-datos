@@ -6,7 +6,7 @@ import { cropRanking, getSummary, groupCycleSummary, provinceSummary } from './d
 import { createHorizontalDeck } from './navigation/horizontalDeck.js';
 import { createDeckMotion, motionDuration } from './animation/deckMotion.js';
 import { createAmbientBackground } from './animation/ambient.js';
-import { createAttractMode } from './animation/attractMode.js';
+import { createAutoAdvance } from './animation/attractMode.js';
 import { buildAppShell, sections } from './sections/sectionRegistry.js';
 import { renderHeroStage, renderKpis } from './charts/kpiCounters.js';
 import { loadEcuadorTopology, renderProvinceMap } from './charts/provinceMap.js';
@@ -145,7 +145,7 @@ async function init() {
       root: document.querySelector('.deck-app'),
       track: document.querySelector('#deckTrack'),
       progress: document.querySelector('#deckProgress'),
-      counter: document.querySelector('#slideCounter'),
+      counter: null,
       prevButton: document.querySelector('#prevSlide'),
       nextButton: document.querySelector('#nextSlide'),
       dots: [...document.querySelectorAll('.dot')]
@@ -153,11 +153,10 @@ async function init() {
 
     createAmbientBackground(document.querySelector('.deck-app'));
     wireFullscreen(document.querySelector('#fullscreenToggle'));
-    createAttractMode({
+    createAutoAdvance({
       deck,
-      badge: document.querySelector('#attractBadge'),
-      sections,
-      explorerYearCount: summary.years.length
+      toggleButton: document.querySelector('#autoAdvanceToggle'),
+      sections
     });
 
     dismissLoading(() => motion.start(deck.getIndex()));

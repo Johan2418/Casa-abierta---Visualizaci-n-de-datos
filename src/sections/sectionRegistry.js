@@ -136,16 +136,24 @@ export function buildAppShell(ctx) {
       <header class="topbar" aria-label="Navegación principal">
         <div class="brand">Sembrando Datos</div>
         <div class="topbar-meta">Ecuador · Agroproducción · 2002-2025</div>
-        <button class="fullscreen-toggle" id="fullscreenToggle" type="button" aria-label="Pantalla completa" aria-pressed="false">
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-expand">
-            <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
-          </svg>
-          <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-collapse">
-            <path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" />
-          </svg>
-        </button>
+        <div class="topbar-actions">
+          <button class="auto-advance-toggle" id="autoAdvanceToggle" type="button" aria-label="Activar autoavance" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path class="auto-icon-play" d="M8 5v14l11-7z" />
+              <path class="auto-icon-pause" d="M7 5h4v14H7zM13 5h4v14h-4z" />
+            </svg>
+            <span class="auto-advance-label">Auto OFF</span>
+          </button>
+          <button class="fullscreen-toggle" id="fullscreenToggle" type="button" aria-label="Pantalla completa" aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-expand">
+              <path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" />
+            </svg>
+            <svg viewBox="0 0 24 24" aria-hidden="true" class="icon-collapse">
+              <path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5" />
+            </svg>
+          </button>
+        </div>
       </header>
-      <div class="attract-badge" id="attractBadge" aria-live="polite">Modo demostración · toca para continuar</div>
       <button class="nav-arrow nav-arrow-left" id="prevSlide" type="button" aria-label="Retroceder sala">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5 8 12l7 7"/></svg>
       </button>
@@ -156,7 +164,6 @@ export function buildAppShell(ctx) {
         ${sections.map((section, index) => renderSlide(section, index, ctx)).join('')}
       </div>
       <footer class="deck-progress" id="deckProgress">
-        <span id="slideCounter">01 / 09</span>
         <div class="progress-line" aria-hidden="true"></div>
         <div class="dots" id="deckDots">
           ${sections

@@ -1,24 +1,14 @@
 import { gsap } from 'gsap';
 
-const IDLE_MS = 45000;
-const SLIDE_MS = 6500;
-const EXPLORER_RACE_BUFFER_MS = 3000;
+const SLIDE_MS = 8000;
 
 /**
- * Modo kiosco: tras un período de inactividad, recorre las salas solo y
- * dispara la carrera del explorador, para que el stand nunca se vea estático
- * en la casa abierta. Cualquier interacción real lo detiene de inmediato.
+ * Autoavance manual: apagado por defecto. Al activarse recorre las secciones
+ * a intervalo fijo; al desactivarse no vuelve a avanzar por su cuenta.
  */
-export function createAttractMode({ deck, badge, sections, explorerYearCount = 24, playStepMs = 900 }) {
-  let idleTimer = null;
+export function createAutoAdvance({ deck, toggleButton, sections, slideMs = SLIDE_MS }) {
   let advanceTimer = null;
   let active = false;
-
-  const explorerDurationMs = explorerYearCount * playStepMs + EXPLORER_RACE_BUFFER_MS;
-
-  function slideDurationFor(index) {
-    return sections[index]?.id === 'explorer' ? explorerDurationMs : SLIDE_MS;
-  }
 
   function triggerExplorerRace() {
     const playButton = document.querySelector('#playYears');
@@ -27,63 +17,56 @@ export function createAttractMode({ deck, badge, sections, explorerYearCount = 2
     }
   }
 
-  function showBadge() {
-    if (!badge) return;
-    gsap.to(badge, { autoAlpha: 1, duration: 0.5, ease: 'power2.out' });
-  }
+  function updateButton() {
+    if (!toggleButton) return;
+    toggleButton.classList.toggle('is-active', active);
+    toggleButton.setAttribute('aria-pressed', String(active));
+    toggleButton.setAttribute('aria-label', active ? 'Desactivar autoavance' : 'Activar autoavance');
 
-  function hideBadge() {
-    if (!badge) return;
-    gsap.to(badge, { autoAlpha: 0, duration: 0.35, ease: 'power2.in' });
+    const label = toggleButton.querySelector('.auto-advance-label');
+    if (label) label.textContent = active ? 'Auto ON' : 'Auto OFF';
   }
 
   function scheduleAdvance() {
     clearTimeout(advanceTimer);
     advanceTimer = setTimeout(() => {
       if (!active) return;
+
       const index = deck.getIndex();
       if (index >= deck.getSlideCount() - 1) {
         deck.goTo(0);
+        if (sections[0]?.id === 'explorer') triggerExplorerRace();
       } else {
         deck.next();
         if (sections[index + 1]?.id === 'explorer') triggerExplorerRace();
       }
-      scheduleAdvance();
-    }, slideDurationFor(deck.getIndex()));
+
+      if (active) scheduleAdvance();
+    }, slideMs);
   }
 
-  function startAttract() {
+  function start() {
     if (active) return;
     active = true;
-    document.body.classList.add('is-attract');
-    showBadge();
-    if (deck.getIndex() !== 0) deck.goTo(0);
+    updateButton();
+    gsap.fromTo(toggleButton, { scale: 0.96 }, { scale: 1, duration: 0.24, ease: 'back.out(2)' });
     scheduleAdvance();
   }
 
-  function stopAttract() {
+  function stop() {
     if (!active) return;
     active = false;
-    document.body.classList.remove('is-attract');
-    hideBadge();
     clearTimeout(advanceTimer);
+    advanceTimer = null;
+    updateButton();
   }
 
-  function scheduleIdle() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(startAttract, IDLE_MS);
-  }
+  toggleButton?.addEventListener('click', () => {
+    if (active) stop();
+    else start();
+  });
 
-  function onActivity() {
-    if (active) stopAttract();
-    scheduleIdle();
-  }
+  updateButton();
 
-  ['pointerdown', 'keydown', 'wheel', 'touchstart'].forEach((evt) =>
-    window.addEventListener(evt, onActivity, { passive: true })
-  );
-
-  scheduleIdle();
-
-  return { stopAttract, isActive: () => active };
+  return { start, stop, isActive: () => active };
 }

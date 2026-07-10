@@ -94,7 +94,9 @@ export function createHorizontalDeck({ root, track, progress, counter, prevButto
       dot.setAttribute('aria-current', dotIndex === index ? 'step' : 'false');
     });
 
-    counter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+    if (counter) {
+      counter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+    }
     progress.style.setProperty('--progress', `${((index + 1) / slides.length) * 100}%`);
     prevButton.disabled = index === 0;
     nextButton.disabled = index === slides.length - 1;
