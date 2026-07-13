@@ -57,13 +57,10 @@ export const sections = [
   {
     id: 'diversity',
     theme: 'violet',
-    title: 'Diversidad vs concentración',
-    subtitle: 'No todo liderazgo productivo significa diversidad agrícola.',
-    body: 'Shannon alto indica más diversidad; HHI alto indica mayor concentración de superficie.',
-    insight: (ctx) => {
-      const diverse = [...ctx.provinces].sort((a, b) => (b.diversity ?? 0) - (a.diversity ?? 0))[0];
-      return `${diverse.province} es la provincia más diversa: Shannon ${fmt.decimal(diverse.diversity)}`;
-    }
+    title: 'Producción en movimiento',
+    subtitle: '¿Qué cultivos crecen y cuáles pierden fuerza?',
+    body: 'Cada punto es una combinación provincia–cultivo. A la derecha se produce más; arriba crece; abajo cae. El tamaño representa superficie y el color, región.',
+    insight: () => 'En 2025, 128 combinaciones son motores de alto volumen y crecimiento'
   },
   {
     id: 'groups',

@@ -101,6 +101,7 @@ export function provinceSummary(rows, year) {
         crops: uniqueValues(items, 'cultivo').length,
         region: items.find((item) => item.region_natural)?.region_natural ?? 'Sin clasificar',
         diversity: d3.mean(items, (row) => row.indice_diversidad_shannon_normalizado),
+        yield: d3.mean(items, (row) => row.rendimiento_t_ha),
         hhi: d3.mean(items, (row) => row.indice_concentracion_hhi_superficie),
         qualityComplete: items.filter((row) => row.calidad_dato === 'Completo').length / Math.max(items.length, 1)
       }),
@@ -108,6 +109,34 @@ export function provinceSummary(rows, year) {
     )
     .map(([province, values]) => ({ province, ...values }))
     .sort((a, b) => d3.descending(a.production, b.production));
+}
+
+/**
+ * Filas listas para el cuadrante de escala y evolución: una burbuja por
+ * provincia × cultivo. 2002 no entra porque no tiene comparación interanual.
+ */
+export function productionMomentumRows(rows, year, group = '') {
+  return rows
+    .filter(
+      (row) =>
+        row.anio === Number(year) &&
+        (!group || row.grupo_cultivo === group) &&
+        Number.isFinite(row.produccion_t) &&
+        row.produccion_t > 0 &&
+        Number.isFinite(row.superficie_cosechada_ha) &&
+        row.superficie_cosechada_ha > 0 &&
+        Number.isFinite(row.variacion_produccion_interanual_pct)
+    )
+    .map((row) => ({
+      id: `${row.provincia}::${row.cultivo}`,
+      province: row.provincia,
+      crop: row.cultivo,
+      group: row.grupo_cultivo || 'Sin clasificar',
+      region: row.region_natural || 'Sin clasificar',
+      production: row.produccion_t,
+      change: row.variacion_produccion_interanual_pct,
+      harvested: row.superficie_cosechada_ha
+    }));
 }
 
 const SERIES_FIELD = {

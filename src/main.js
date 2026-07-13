@@ -12,7 +12,7 @@ import { renderHeroStage, renderKpis } from './charts/kpiCounters.js';
 import { loadEcuadorTopology, renderProvinceMap } from './charts/provinceMap.js';
 import { renderTimeline } from './charts/timelineChart.js';
 import { renderRankingBars } from './charts/rankingBars.js';
-import { renderDiversityScatter } from './charts/diversityScatter.js';
+import { renderProductionMomentumScatter } from './charts/productionMomentumScatter.js';
 import { renderGroupCycleBars } from './charts/groupCycleBars.js';
 import { renderProvinceCompare } from './charts/provinceCompare.js';
 import { renderExplorer } from './charts/explorerDashboard.js';
@@ -111,6 +111,7 @@ async function init() {
     // por closure y solo se invoca mucho después (al hacer clic), para
     // entonces ya están asignadas.
     let compareHandle;
+    let momentumHandle;
     let deck;
 
     function goToCompareWith(provinceName) {
@@ -127,7 +128,8 @@ async function init() {
       );
       motion.registerChart('timeline', renderTimeline(stage('timeline'), rows, summary));
       motion.registerChart('ranking', renderRankingBars(stage('ranking'), crops, `Top cultivos ${summary.latestYear}`));
-      motion.registerChart('diversity', renderDiversityScatter(stage('diversity'), provinces, tooltip));
+      momentumHandle = renderProductionMomentumScatter(stage('diversity'), rows, summary, tooltip);
+      motion.registerChart('diversity', momentumHandle);
       motion.registerChart('groups', renderGroupCycleBars(stage('groups'), groups));
       compareHandle = renderProvinceCompare(stage('compare'), rows, summary);
       motion.registerChart('compare', compareHandle);
@@ -168,7 +170,10 @@ async function init() {
         renderProvinceMap(stage('map'), provinces, tooltip, topology, summary.latestYear, goToCompareWith)
       );
       motion.registerChart('ranking', renderRankingBars(stage('ranking'), crops, `Top cultivos ${summary.latestYear}`));
-      motion.registerChart('diversity', renderDiversityScatter(stage('diversity'), provinces, tooltip));
+      const momentumState = momentumHandle?.getState?.() ?? { year: summary.latestYear, group: '', focus: 'all' };
+      momentumHandle?.destroy?.();
+      momentumHandle = renderProductionMomentumScatter(stage('diversity'), rows, summary, tooltip, momentumState);
+      motion.registerChart('diversity', momentumHandle);
       motion.registerChart('groups', renderGroupCycleBars(stage('groups'), groups));
       compareHandle = renderProvinceCompare(stage('compare'), rows, summary);
       motion.registerChart('compare', compareHandle);

@@ -761,11 +761,134 @@ h1 .word-inner {
 }
 
 .chart-controls,
-.explorer-controls {
+.explorer-controls,
+.momentum-controls {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   padding: 16px;
+}
+
+.momentum-shell {
+  height: 100%;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.momentum-plot {
+  min-height: 0;
+  position: relative;
+}
+
+.momentum-year-backdrop {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font: 800 clamp(100px, 19vw, 250px) Archivo, sans-serif;
+  color: color-mix(in srgb, var(--accent) 9%, transparent);
+  pointer-events: none;
+  user-select: none;
+  letter-spacing: -0.02em;
+}
+
+.momentum-plot .chart-svg {
+  position: relative;
+  z-index: 1;
+}
+
+.momentum-controls {
+  align-items: center;
+}
+
+.momentum-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  align-items: center;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.momentum-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.momentum-legend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  box-shadow: 0 0 8px currentColor;
+}
+
+.quadrant-shade {
+  pointer-events: none;
+}
+
+.quadrant-title {
+  fill: rgba(246, 255, 247, 0.7);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.quadrant-meaning {
+  fill: rgba(246, 255, 247, 0.66);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.quadrant-count {
+  fill: rgba(246, 255, 247, 0.48);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.momentum-quadrant-label {
+  cursor: zoom-in;
+  outline: none;
+}
+
+.momentum-quadrant-label:hover .quadrant-title,
+.momentum-quadrant-label:focus .quadrant-title {
+  fill: #fff;
+}
+
+.momentum-focus-reset {
+  position: absolute;
+  z-index: 3;
+  top: 10px;
+  right: 18px;
+  min-height: 34px;
+  padding: 0 13px;
+  border: 1px solid color-mix(in srgb, var(--accent) 58%, transparent);
+  border-radius: 999px;
+  background: rgba(3, 9, 8, 0.86);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
+  cursor: zoom-out;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+}
+
+.momentum-focus-reset:hover,
+.momentum-focus-reset:focus-visible {
+  background: color-mix(in srgb, var(--accent) 22%, rgba(3, 9, 8, 0.9));
+  outline: none;
+}
+
+.momentum-point {
+  cursor: pointer;
+  transition: fill-opacity 150ms ease, stroke-opacity 150ms ease;
+}
+
+.momentum-point.is-hovered {
+  fill-opacity: 0.95 !important;
+  stroke-opacity: 0.9 !important;
 }
 
 select {
@@ -1565,7 +1688,8 @@ input[type='range']::-moz-range-thumb {
   }
 
   .chart-controls,
-  .explorer-controls {
+  .explorer-controls,
+  .momentum-controls {
     padding: 10px;
     gap: 8px;
   }
