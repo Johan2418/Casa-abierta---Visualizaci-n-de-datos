@@ -77,7 +77,11 @@ export function renderLiveQuiz(container, { rows, summary }) {
         global = await client.getGlobalLeaderboard(); render();
       } catch (error) { window.alert(error.message || 'No se pudo completar la acción.'); }
     });
-    timer = setInterval(() => { if (isVisible && session?.status !== 'lobby') refresh(); }, 1000);
+    // El Broadcast actualiza al instante cuando Realtime está disponible. El
+    // sondeo es el respaldo, también en lobby, para que el contador no se
+    // quede en cero si un teléfono se une antes de que el canal privado
+    // termine de conectarse.
+    timer = setInterval(() => { if (isVisible && session) refresh(); }, 1000);
   }
 
   container.innerHTML = '<div class="quiz-loading">Preparando el quiz…</div>';
