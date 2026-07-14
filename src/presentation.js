@@ -28,10 +28,11 @@ const app = document.querySelector('#app');
 const loading = document.querySelector('#loading');
 const loadingBar = loading?.querySelector('.loading-bar span');
 const stage = (id) => document.querySelector(`#stage-${id}`);
+const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 
 function fail(error) {
   loading?.remove();
-  app.innerHTML = `<main class="error-state"><h1>No se pudo iniciar la visualización</h1><p>${error.message}</p><p>Revisa que el archivo CSV exista en <code>public/data/</code>.</p></main>`;
+  app.innerHTML = `<main class="error-state"><h1>No se pudo iniciar la visualización</h1><p>${escapeHtml(error.message)}</p><p>Revisa que el archivo CSV exista en <code>public/data/</code>.</p></main>`;
 }
 function dismiss(onDone) {
   if (!loading) return onDone();
@@ -59,12 +60,12 @@ export async function startPresentation() {
     const tooltip = document.querySelector('#tooltip');
     const motion = createDeckMotion();
     const profileIndex = sections.findIndex((section) => section.id === 'profile');
-    let compareHandle; let profileHandle; let momentumHandle; let deck;
+    let compareHandle; let profileHandle; let momentumHandle; let mapHandle; let deck;
     const goToProvinceProfile = (provinceName) => { profileHandle?.selectProvince(provinceName); if (profileIndex >= 0) deck?.goTo(profileIndex); };
     function renderCharts() {
       motion.registerChart('hero', renderHeroStage(stage('hero'), summary));
       motion.registerChart('numbers', renderKpis(stage('numbers'), summary));
-      motion.registerChart('map', renderProvinceMap(stage('map'), rows, tooltip, topology, summary, goToProvinceProfile));
+      mapHandle = renderProvinceMap(stage('map'), rows, tooltip, topology, summary, goToProvinceProfile); motion.registerChart('map', mapHandle);
       motion.registerChart('timeline', renderTimeline(stage('timeline'), rows, summary));
       profileHandle = renderProvinceProfile(stage('profile'), rows, summary); motion.registerChart('profile', profileHandle);
       motion.registerChart('ranking', renderRankingBars(stage('ranking'), crops, `Top cultivos ${summary.latestYear}`));
@@ -86,7 +87,8 @@ export async function startPresentation() {
     dismiss(() => motion.start(deck.getIndex()));
     let resizeFrame;
     window.addEventListener('resize', () => { cancelAnimationFrame(resizeFrame); resizeFrame = requestAnimationFrame(() => {
-      motion.registerChart('map', renderProvinceMap(stage('map'), rows, tooltip, topology, summary, goToProvinceProfile));
+      const mapState = mapHandle?.getState?.() ?? { year: summary.latestYear };
+      mapHandle?.destroy?.(); mapHandle = renderProvinceMap(stage('map'), rows, tooltip, topology, summary, goToProvinceProfile, mapState); motion.registerChart('map', mapHandle);
       motion.registerChart('ranking', renderRankingBars(stage('ranking'), crops, `Top cultivos ${summary.latestYear}`));
       const momentumState = momentumHandle?.getState?.() ?? { year: summary.latestYear, group: '', focus: 'all' };
       momentumHandle?.destroy?.(); momentumHandle = renderProductionMomentumScatter(stage('diversity'), rows, summary, tooltip, momentumState); motion.registerChart('diversity', momentumHandle);

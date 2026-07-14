@@ -2,8 +2,10 @@ import * as d3 from 'd3';
 import { fmt, provinceProfile, provinceSummary } from '../data/aggregateData.js';
 import { motionDuration } from '../animation/deckMotion.js';
 
+const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
+
 function options(values, selected) {
-  return values.map((value) => `<option value="${value}"${value === selected ? ' selected' : ''}>${value}</option>`).join('');
+  return values.map((value) => `<option value="${escapeHtml(value)}"${value === selected ? ' selected' : ''}>${escapeHtml(value)}</option>`).join('');
 }
 
 function insight(profile) {
@@ -70,16 +72,17 @@ export function renderProvinceProfile(container, rows, summary) {
   function draw() {
     const profile = provinceProfile(rows, selected, selectedYear);
     const gap = profile.reportedGap === null ? 'Sin superficie plantada comparable' : `${fmt.pct(profile.reportedGap)}%`;
+    const gapNote = profile.reportedGap !== null && profile.reportedGap < 0 ? 'El área cosechada supera la plantada reportada; revisa la fuente.' : 'Solo filas con ambas superficies reportadas';
     const crop = profile.topCrop;
     summaryHost.innerHTML = `
-      <div class="profile-heading"><span>${profile.region} · ${profile.year}</span><strong>${profile.province}</strong><p>${insight(profile)}</p></div>
+      <div class="profile-heading"><span>${escapeHtml(profile.region)} · ${profile.year}</span><strong>${escapeHtml(profile.province)}</strong><p>${escapeHtml(insight(profile))}</p></div>
       <div class="profile-metrics">
         <article><span>Producción</span><strong>${fmt.compact(profile.production)} t</strong><small>Mediana regional: ${fmt.compact(profile.regionalProductionMedian)} t</small></article>
         <article><span>Rendimiento agregado</span><strong>${fmt.decimal(profile.yield)} t/ha</strong><small>Mediana regional: ${fmt.decimal(profile.regionalYieldMedian)} t/ha</small></article>
-        <article><span>Cultivo líder</span><strong>${crop?.crop ?? 'Sin dato'}</strong><small>${crop ? `${fmt.pct(profile.production ? (crop.production / profile.production) * 100 : 0)}% de la producción provincial` : ''}</small></article>
-        <article><span>Brecha plantada/cosechada</span><strong>${gap}</strong><small>Solo filas con ambas superficies reportadas</small></article>
+        <article><span>Cultivo líder</span><strong>${escapeHtml(crop?.crop ?? 'Sin dato')}</strong><small>${crop ? `${fmt.pct(profile.production ? (crop.production / profile.production) * 100 : 0)}% de la producción provincial` : ''}</small></article>
+        <article><span>Brecha plantada/cosechada</span><strong>${gap}</strong><small>${gapNote}</small></article>
       </div>
-      <div class="profile-signals"><span>Diversidad Shannon <b>${fmt.decimal(profile.diversity)}</b></span><span>Concentración HHI <b>${fmt.decimal(profile.hhi)}</b></span><span>Calidad dominante <b>${profile.quality.label} (${fmt.pct(profile.quality.share * 100)}%)</b></span></div>
+      <div class="profile-signals"><span>Diversidad Shannon <b>${fmt.decimal(profile.diversity)}</b></span><span>Concentración HHI <b>${fmt.decimal(profile.hhi)}</b></span><span>Calidad dominante <b>${escapeHtml(profile.quality.label)} (${fmt.pct(profile.quality.share * 100)}%)</b></span></div>
     `;
     method.textContent = `Cobertura: ${profile.coverage.firstYear ?? 'sin dato'}–${profile.coverage.lastYear ?? 'sin dato'} (${profile.coverage.years} años). Rendimiento = producción total ÷ superficie cosechada total; las comparaciones usan la mediana de provincias de ${profile.region}.`;
     drawTrend(profile);

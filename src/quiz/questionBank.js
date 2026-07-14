@@ -3,6 +3,8 @@ import { cropRanking, groupCycleSummary, provinceSummary, qualityBreakdown, sumF
 
 export const QUIZ_QUESTION_COUNT = 8;
 export const QUIZ_DURATION_MS = 20_000;
+export const QUIZ_MIN_DURATION_SECONDS = 5;
+export const QUIZ_MAX_DURATION_SECONDS = 120;
 export const QUESTION_BANK_VERSION = 'agro-2025-v1';
 
 const letters = ['A', 'B', 'C', 'D'];
@@ -39,6 +41,12 @@ function shuffle(items) {
 export function scoreAnswer(remainingMs, durationMs = QUIZ_DURATION_MS) {
   const safeRemaining = Math.max(0, Math.min(durationMs, remainingMs));
   return 500 + Math.floor(500 * (safeRemaining / durationMs));
+}
+
+export function normalizeQuizDurationSeconds(value, fallback = QUIZ_DURATION_MS / 1000) {
+  const seconds = Number(value);
+  if (!Number.isInteger(seconds)) return fallback;
+  return Math.min(QUIZ_MAX_DURATION_SECONDS, Math.max(QUIZ_MIN_DURATION_SECONDS, seconds));
 }
 
 export function buildQuestionBank(rows, summary) {

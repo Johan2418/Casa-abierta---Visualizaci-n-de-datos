@@ -261,7 +261,9 @@ export function provinceProfile(rows, province, year) {
     coverage: { firstYear: years[0] ?? null, lastYear: years.at(-1) ?? null, years: years.length },
     planted,
     harvestedComparable,
-    reportedGap: planted ? Math.max(0, ((planted - harvestedComparable) / planted) * 100) : null,
+    // Se conserva el signo para no ocultar registros donde lo cosechado supera
+    // lo plantado; esos casos deben leerse como una inconsistencia a revisar.
+    reportedGap: planted ? ((planted - harvestedComparable) / planted) * 100 : null,
     quality,
     regionalProductionMedian,
     regionalYieldMedian,

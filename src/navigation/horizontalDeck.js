@@ -91,16 +91,21 @@ export function createHorizontalDeck({ root, track, progress, counter, prevButto
     });
 
     dots.forEach((dot, dotIndex) => {
+      const allowed = !route || route.includes(dotIndex);
+      dot.hidden = !allowed;
+      dot.disabled = !allowed;
       dot.classList.toggle('is-active', dotIndex === index);
       dot.setAttribute('aria-current', dotIndex === index ? 'step' : 'false');
     });
 
     if (counter) {
-      counter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+      const counterIndex = route ? route.indexOf(index) + 1 : index + 1;
+      const counterLength = route ? route.length : slides.length;
+      counter.textContent = `${String(counterIndex).padStart(2, '0')} / ${String(counterLength).padStart(2, '0')}`;
     }
-    progress.style.setProperty('--progress', `${((index + 1) / slides.length) * 100}%`);
     const routePosition = route ? route.indexOf(index) : index;
     const routeLength = route ? route.length : slides.length;
+    progress.style.setProperty('--progress', `${((routePosition + 1) / routeLength) * 100}%`);
     prevButton.disabled = routePosition <= 0;
     nextButton.disabled = routePosition >= routeLength - 1;
     root.dataset.theme = slides[index].dataset.theme ?? 'green';
@@ -111,6 +116,7 @@ export function createHorizontalDeck({ root, track, progress, counter, prevButto
 
   function goTo(nextIndex) {
     const clamped = Math.max(0, Math.min(slides.length - 1, nextIndex));
+    if (route && !route.includes(clamped)) return;
     if (clamped === index) return;
     const prevIndex = index;
     index = clamped;

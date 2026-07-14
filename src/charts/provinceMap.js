@@ -7,6 +7,7 @@ const TOPO_PATH = '/data/ecuador-provincias.topo.json';
 const COLOR_LOW = '#132019';
 const COLOR_HIGH = '#f4c95d';
 const NO_DATA_FILL = 'rgba(255, 255, 255, 0.07)';
+const escapeHtml = (value = '') => String(value).replace(/[&<>'"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[char]));
 
 export async function loadEcuadorTopology() {
   try {
@@ -38,10 +39,10 @@ function hideTooltip(tooltip) {
   tooltip.classList.remove('is-visible');
 }
 
-export function renderProvinceMap(container, rows, tooltip, topology, summary, onProvinceClick) {
+export function renderProvinceMap(container, rows, tooltip, topology, summary, onProvinceClick, initialState = {}) {
   const width = container.clientWidth || 720;
   const height = container.clientHeight || 520;
-  let currentYear = summary.latestYear;
+  let currentYear = summary.years.includes(Number(initialState.year)) ? Number(initialState.year) : summary.latestYear;
   let data = provinceSummary(rows, currentYear);
 
   if (!topology) {
@@ -111,8 +112,8 @@ export function renderProvinceMap(container, rows, tooltip, topology, summary, o
     .on('mousemove', (event, f) => {
       const d = dataByName.get(normalizeName(f.properties.name));
       const html = d
-        ? `<strong>${d.province}</strong><span>${d.region}</span><span>${fmt.compact(d.production)} t · ${d.crops} cultivos</span><span>Diversidad ${fmt.decimal(d.diversity ?? 0)}</span>${onProvinceClick ? '<span class="tooltip-hint">Clic para radiografía →</span>' : ''}`
-        : `<strong>${f.properties.name}</strong><span>Sin datos en el CSV</span>`;
+        ? `<strong>${escapeHtml(d.province)}</strong><span>${escapeHtml(d.region)}</span><span>${fmt.compact(d.production)} t · ${d.crops} cultivos</span><span>Diversidad ${fmt.decimal(d.diversity ?? 0)}</span>${onProvinceClick ? '<span class="tooltip-hint">Clic para radiografía →</span>' : ''}`
+        : `<strong>${escapeHtml(f.properties.name)}</strong><span>Sin datos en el CSV</span>`;
       showTooltip(event, tooltip, html);
       d3.select(event.currentTarget).attr('stroke', '#fff').attr('stroke-width', 1.6).raise();
     })
@@ -134,20 +135,19 @@ export function renderProvinceMap(container, rows, tooltip, topology, summary, o
   }
 
   // Halo pulsante sobre la provincia líder.
-  const leaderFeature = matched.reduce(
-    (best, f) =>
-      dataByName.get(normalizeName(f.properties.name)).production >
-      (best ? dataByName.get(normalizeName(best.properties.name)).production : -1)
-        ? f
-        : best,
-    null
-  );
-  const leaderCentroid = leaderFeature ? geoPath.centroid(leaderFeature) : null;
+  const leaderCentroid = () => {
+    const leader = matched.reduce(
+      (best, featureItem) => (dataByName.get(normalizeName(featureItem.properties.name))?.production ?? -1) > (best ? (dataByName.get(normalizeName(best.properties.name))?.production ?? -1) : -1) ? featureItem : best,
+      null
+    );
+    return leader ? geoPath.centroid(leader) : null;
+  };
+  let currentLeaderCentroid = leaderCentroid();
   const halo = svg
     .append('circle')
     .attr('class', 'leader-halo')
-    .attr('cx', leaderCentroid?.[0] ?? -100)
-    .attr('cy', leaderCentroid?.[1] ?? -100)
+    .attr('cx', currentLeaderCentroid?.[0] ?? -100)
+    .attr('cy', currentLeaderCentroid?.[1] ?? -100)
     .attr('r', 0)
     .attr('fill', 'none')
     .attr('stroke', COLOR_HIGH);
@@ -238,11 +238,13 @@ export function renderProvinceMap(container, rows, tooltip, topology, summary, o
     currentYear = Number(year);
     data = provinceSummary(rows, currentYear);
     dataByName = new Map(data.map((item) => [normalizeName(item.province), item]));
+    currentLeaderCentroid = leaderCentroid();
     title.text(`Producción provincial ${currentYear}`);
     yearInput.value = currentYear;
     yearValue.textContent = currentYear;
     const selection = animate ? paths.transition().duration(motionDuration(0.55) * 1000) : paths;
     selection.attr('fill', finalFill);
+    halo.interrupt().transition().duration(animate ? motionDuration(0.55) * 1000 : 0).attr('cx', currentLeaderCentroid?.[0] ?? -100).attr('cy', currentLeaderCentroid?.[1] ?? -100);
   }
 
   function stopPlayback() {
@@ -306,7 +308,7 @@ export function renderProvinceMap(container, rows, tooltip, topology, summary, o
       .duration(motionDuration(0.6) * 1000)
       .attr('opacity', 1);
 
-    if (leaderCentroid) {
+    if (currentLeaderCentroid) {
       halo
         .interrupt()
         .attr('stroke-opacity', 0)
@@ -335,5 +337,5 @@ export function renderProvinceMap(container, rows, tooltip, topology, summary, o
     halo.interrupt().attr('stroke-opacity', 0);
   }
 
-  return { play, reset, destroy: stopPlayback };
+  return { play, reset, destroy: () => { stopPlayback(); halo.interrupt(); }, getState: () => ({ year: currentYear }) };
 }
