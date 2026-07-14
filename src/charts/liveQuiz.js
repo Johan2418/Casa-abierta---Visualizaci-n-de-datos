@@ -81,7 +81,7 @@ export function renderLiveQuiz(container, { rows, summary }) {
     // sondeo es el respaldo, también en lobby, para que el contador no se
     // quede en cero si un teléfono se une antes de que el canal privado
     // termine de conectarse.
-    timer = setInterval(() => { if (isVisible && session) refresh(); }, 1000);
+    timer = setInterval(() => { if (session) refresh(); }, 1000);
   }
 
   container.innerHTML = '<div class="quiz-loading">Preparando el quiz…</div>';

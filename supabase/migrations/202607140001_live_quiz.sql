@@ -240,7 +240,19 @@ grant execute on function public.quiz_create_session(), public.quiz_get_global_l
 grant execute on function public.quiz_join_session(text,text), public.quiz_start_session(text), public.quiz_host_command(text,text), public.quiz_submit_answer(text,text), public.quiz_tick_session(text), public.quiz_get_state(text) to authenticated;
 
 -- Canal privado: solo anfitrión o participante de la sesión puede escuchar `quiz:<código>`.
+create or replace function public.quiz_can_subscribe_realtime(p_topic text)
+returns boolean language sql stable security definer set search_path = public as $$
+  select exists (
+    select 1 from quiz_sessions s
+    where p_topic = 'quiz:' || s.code
+      and (s.host_user_id = auth.uid() or exists (
+        select 1 from quiz_participants p where p.session_id = s.id and p.user_id = auth.uid()
+      ))
+  );
+$$;
+grant execute on function public.quiz_can_subscribe_realtime(text) to authenticated;
+
 drop policy if exists quiz_members_receive_state on realtime.messages;
 create policy quiz_members_receive_state on realtime.messages for select to authenticated using (
-  exists (select 1 from public.quiz_sessions s where realtime.topic() = 'quiz:' || s.code and (s.host_user_id = auth.uid() or exists (select 1 from public.quiz_participants p where p.session_id=s.id and p.user_id=auth.uid())))
+  public.quiz_can_subscribe_realtime(realtime.topic())
 );

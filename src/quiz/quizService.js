@@ -111,10 +111,18 @@ async function createRemoteClient() {
     remoteClientPromise = import('@supabase/supabase-js').then(async ({ createClient }) => {
       const supabase = createClient(env.VITE_SUPABASE_URL, env.VITE_SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: true, autoRefreshToken: true } });
       const { data } = await supabase.auth.getSession();
-      if (!data.session) {
-        const { error } = await supabase.auth.signInAnonymously();
+      let authSession = data.session;
+      if (!authSession) {
+        const { data: signInData, error } = await supabase.auth.signInAnonymously();
         if (error) throw error;
+        authSession = signInData.session;
       }
+      // Los canales privados de Realtime requieren que el socket reciba el
+      // JWT actual, además de la sesión usada por las llamadas REST/RPC.
+      if (authSession?.access_token) await supabase.realtime.setAuth(authSession.access_token);
+      supabase.auth.onAuthStateChange((_event, nextSession) => {
+        if (nextSession?.access_token) supabase.realtime.setAuth(nextSession.access_token).catch(() => {});
+      });
       const rpc = async (fn, args = {}) => {
         const { data: result, error } = await supabase.rpc(fn, args);
         if (error) throw error;
