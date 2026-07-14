@@ -1,8 +1,10 @@
 import * as d3 from 'd3';
 import { fmt, productionMomentumRows } from '../data/aggregateData.js';
-import { motionDuration } from '../animation/deckMotion.js';
+import { motionDuration, isReducedMotion } from '../animation/deckMotion.js';
 
-const PLAY_STEP_MS = 900;
+// Duración de transición más larga (1.4s) + pausa (0.6s) = 2s total por año
+const PLAY_TRANSITION_MS = 1400;
+const PLAY_PAUSE_MS = 600;
 
 const regionColor = {
   Costa: '#f4c95d',
@@ -41,8 +43,10 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
           <span class="play-icon">▶</span><span class="play-label">${years[0]} → ${summary.latestYear}</span>
         </button>
         <label class="year-control" for="momentumYear">
+          <span class="year-marker" id="momentumYearStart">${years[0]}</span>
           <input id="momentumYear" type="range" min="${years[0]}" max="${summary.latestYear}" step="1" value="${year}" aria-label="Año del gráfico de producción en movimiento" />
           <span class="year-value" id="momentumYearValue">${year}</span>
+          <span class="year-marker" id="momentumYearEnd">${summary.latestYear}</span>
         </label>
         <select id="momentumGroup" aria-label="Grupo de cultivo">${groupOptions(summary.groups, group)}</select>
         <div class="momentum-legend" aria-label="Regiones naturales">
@@ -102,9 +106,58 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
   let playTimer = null;
   let destroyed = false;
   let focus = QUADRANT_KEYS.has(initialState.focus) ? initialState.focus : 'all';
+  
+  // Cache de dominios fijos para cada grupo
+  let fixedScales = null;
 
   function currentData() {
     return productionMomentumRows(rows, year, group);
+  }
+
+  /**
+   * Calcula y cachea los dominios fijos (X, Y, radius) para todo el período
+   * del grupo seleccionado. Se recalcula cuando cambia el grupo.
+   */
+  function computeFixedScales() {
+    // Recopilar todos los datos válidos para el período completo
+    const allGroupData = [];
+    for (const y of years) {
+      allGroupData.push(...productionMomentumRows(rows, y, group));
+    }
+
+    if (!allGroupData.length) {
+      // Sin datos para este grupo en todo el período
+      return {
+        minProduction: 1,
+        maxProduction: 10,
+        globalMedianProduction: 5.5,
+        minChange: -1,
+        maxChange: 1,
+        maxAreaCap: 1
+      };
+    }
+
+    const productions = allGroupData.map((p) => p.production).sort(d3.ascending);
+    const changes = allGroupData.map((p) => p.change);
+    const negativeChanges = changes.filter((v) => v < 0).sort(d3.ascending);
+    const positiveChanges = changes.filter((v) => v > 0).sort(d3.ascending);
+    const areas = allGroupData.map((p) => p.harvested).sort(d3.ascending);
+
+    const minProduction = productions[0] || 1;
+    const maxProduction = productions[productions.length - 1] || 10;
+    const globalMedianProduction = d3.median(productions) || ((minProduction + maxProduction) / 2);
+    const minChange = Math.min(d3.quantile(negativeChanges, 0.05) ?? -1, -1);
+    const maxChange = Math.max(d3.quantile(positiveChanges, 0.95) ?? 1, 1);
+    const maxAreaCap = d3.quantile(areas, 0.95) || 1;
+
+    return {
+      minProduction,
+      maxProduction,
+      globalMedianProduction,
+      minChange,
+      maxChange,
+      maxAreaCap
+    };
   }
 
   function stopPlayback() {
@@ -123,25 +176,23 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
     tooltip.style.top = `${event.clientY + 16}px`;
   }
 
-  function yScaleFor(data, focusedQuadrant) {
-    const negative = data.map((point) => point.change).filter((value) => value < 0).sort(d3.ascending);
-    const positive = data.map((point) => point.change).filter((value) => value > 0).sort(d3.ascending);
-    const floor = Math.min(d3.quantile(negative, 0.05) ?? -1, -1);
-    const ceiling = Math.max(d3.quantile(positive, 0.95) ?? 1, 1);
+  function yScaleFor(data, focusedQuadrant, globalMinChange, globalMaxChange) {
     const focusesFall = focusedQuadrant.endsWith('fall');
     const focusesGrowth = focusedQuadrant.endsWith('growth');
     const fallingRange = focusesFall ? [bottom, margin.top] : [bottom, middle];
     const growingRange = focusesGrowth ? [bottom, margin.top] : [middle, margin.top];
-    const falling = d3.scaleSymlog().constant(12).domain([floor, 0]).range(fallingRange).clamp(true);
-    const growing = d3.scaleSymlog().constant(12).domain([0, ceiling]).range(growingRange).clamp(true);
+    const falling = d3.scaleSymlog().constant(12).domain([globalMinChange, 0]).range(fallingRange).clamp(true);
+    const growing = d3.scaleSymlog().constant(12).domain([0, globalMaxChange]).range(growingRange).clamp(true);
+    
     const ticks = focusesFall
-      ? [floor, floor * 0.75, floor / 2, floor / 4, 0]
+      ? [globalMinChange, globalMinChange * 0.75, globalMinChange / 2, globalMinChange / 4, 0]
       : focusesGrowth
-        ? [0, ceiling / 4, ceiling / 2, ceiling * 0.75, ceiling]
-        : [floor, floor / 2, 0, ceiling / 2, ceiling];
+        ? [0, globalMaxChange / 4, globalMaxChange / 2, globalMaxChange * 0.75, globalMaxChange]
+        : [globalMinChange, globalMinChange / 2, 0, globalMaxChange / 2, globalMaxChange];
+    
     return {
-      floor,
-      ceiling,
+      floor: globalMinChange,
+      ceiling: globalMaxChange,
       position: (value) => (value < 0 ? falling(value) : growing(value)),
       ticks: uniqueTicks(ticks).sort((a, b) => a - b)
     };
@@ -165,7 +216,7 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
       .data(scale.ticks, (value) => value.toFixed(8))
       .join(
         (enter) => {
-          const node = enter.append('g').attr('class', 'tick momentum-y-tick').attr('transform', `translate(0,${middle})`);
+          const node = enter.append('g').attr('class', 'tick momentum-y-tick').attr('opacity', 0).attr('transform', `translate(0,${middle})`);
           node.append('line').attr('x2', -6);
           node.append('text').attr('x', -10).attr('dy', '0.32em').attr('text-anchor', 'end');
           return node;
@@ -255,18 +306,18 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
   }
 
   function updateChart(ms = motionDuration(0.72) * 1000, entrance = false) {
+    if (!fixedScales) {
+      fixedScales = computeFixedScales();
+    }
+
     const data = currentData();
-    const minProduction = d3.min(data, (point) => point.production) || 1;
-    const maxProduction = d3.max(data, (point) => point.production) || 10;
-    const safeMaxProduction = maxProduction > minProduction ? maxProduction : minProduction * 10;
-    const productionMedian = d3.median(data, (point) => point.production) || minProduction;
-    const harvestedValues = data.map((point) => point.harvested).sort(d3.ascending);
-    const areaCap = d3.quantile(harvestedValues, 0.95) || 1;
-    const yScale = yScaleFor(data, focus);
+    const scales = fixedScales;
+    const safeMaxProduction = scales.maxProduction > scales.minProduction ? scales.maxProduction : scales.minProduction * 10;
+    const yScale = yScaleFor(data, focus, scales.minChange, scales.maxChange);
     const counts = { 'low-fall': 0, 'high-fall': 0, 'low-growth': 0, 'high-growth': 0 };
 
     const quadrantOf = (point) => {
-      const volume = point.production >= productionMedian ? 'high' : 'low';
+      const volume = point.production >= scales.globalMedianProduction ? 'high' : 'low';
       const direction = point.change >= 0 ? 'growth' : 'fall';
       return `${volume}-${direction}`;
     };
@@ -276,14 +327,14 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
     });
 
     const visibleData = focus === 'all' ? data : data.filter((point) => quadrantOf(point) === focus);
-    let domainMin = minProduction;
+    let domainMin = scales.minProduction;
     let domainMax = safeMaxProduction;
-    if (focus.startsWith('low')) domainMax = productionMedian;
-    if (focus.startsWith('high')) domainMin = productionMedian;
+    if (focus.startsWith('low')) domainMax = scales.globalMedianProduction;
+    if (focus.startsWith('high')) domainMin = scales.globalMedianProduction;
     if (domainMax <= domainMin) domainMax = domainMin * 10;
 
     x.domain([domainMin, domainMax]);
-    radius.domain([0, areaCap]);
+    radius.domain([0, scales.maxAreaCap]);
     yearInput.value = year;
     yearValue.textContent = year;
     yearBackdrop.textContent = year;
@@ -293,14 +344,14 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
     const transition = svg.transition().duration(ms).ease(d3.easeCubicInOut);
     xAxisG.transition(transition).call(d3.axisBottom(x).ticks(5).tickFormat((value) => fmt.compact(value)));
     updateYAxis(yScale, ms);
-    updateQuadrants(quadrantLayout(productionMedian, counts), ms);
+    updateQuadrants(quadrantLayout(scales.globalMedianProduction, counts), ms);
 
     guideV
       .interrupt()
       .transition(transition)
       .attr('opacity', data.length && focus === 'all' ? 1 : 0)
-      .attr('x1', x(productionMedian))
-      .attr('x2', x(productionMedian))
+      .attr('x1', x(scales.globalMedianProduction))
+      .attr('x2', x(scales.globalMedianProduction))
       .attr('y1', margin.top)
       .attr('y2', bottom);
     guideH
@@ -343,25 +394,62 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
   }
 
   function startPlayback() {
+    if (isReducedMotion()) {
+      // Sin animación si prefiere movimiento reducido
+      return;
+    }
+
     playing = true;
     playIcon.textContent = '⏸';
     playButton.classList.add('is-playing');
-    let yearIndex = 0;
+    let yearIndex = years.indexOf(year);
+    if (yearIndex < 0) yearIndex = 0;
+
+    let restarted = false;
+    if (yearIndex === years.length - 1) {
+      // Al llegar al último año, una nueva reproducción reinicia la historia.
+      year = years[0];
+      updateChart(PLAY_TRANSITION_MS, false);
+      yearIndex = 1;
+      restarted = true;
+    } else {
+      // El año visible queda como punto de partida; el primer desplazamiento
+      // lleva la atención al año siguiente sin repetir el mismo estado.
+      yearIndex += 1;
+    }
+    if (yearIndex >= years.length) {
+      stopPlayback();
+      return;
+    }
 
     function step() {
       if (!playing || destroyed) return;
-      year = years[yearIndex];
-      updateChart(PLAY_STEP_MS * 0.8);
-      d3.select(yearBackdrop).interrupt().attr('opacity', 0.45).transition().duration(340).attr('opacity', 1);
-      yearIndex += 1;
+      
       if (yearIndex >= years.length) {
         stopPlayback();
         return;
       }
-      playTimer = setTimeout(step, PLAY_STEP_MS);
+
+      const nextYear = years[yearIndex];
+      year = nextYear;
+      updateChart(PLAY_TRANSITION_MS, false);
+      
+      // Animar año backdrop
+      d3.select(yearBackdrop)
+        .interrupt()
+        .attr('opacity', 0.45)
+        .transition()
+        .duration(PLAY_TRANSITION_MS / 2)
+        .attr('opacity', 1);
+
+      yearIndex += 1;
+      
+      // Transición + pausa antes del siguiente paso
+      playTimer = setTimeout(step, PLAY_TRANSITION_MS + PLAY_PAUSE_MS);
     }
 
-    step();
+    if (restarted) playTimer = setTimeout(step, PLAY_TRANSITION_MS + PLAY_PAUSE_MS);
+    else step();
   }
 
   playButton.addEventListener('click', () => {
@@ -378,6 +466,7 @@ export function renderProductionMomentumScatter(container, rows, summary, toolti
   groupSelect.addEventListener('change', () => {
     stopPlayback();
     group = groupSelect.value;
+    fixedScales = null; // Resetear cache de dominios al cambiar grupo
     updateChart(motionDuration(0.55) * 1000);
   });
 

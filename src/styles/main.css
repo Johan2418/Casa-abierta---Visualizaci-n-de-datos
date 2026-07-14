@@ -1050,6 +1050,13 @@ select {
   border-radius: 999px;
 }
 
+.year-marker {
+  font: 600 12px Archivo, sans-serif;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 32px;
+  text-align: center;
+}
+
 .year-value {
   font: 800 16px Archivo, sans-serif;
   color: var(--accent);
@@ -1708,5 +1715,182 @@ input[type='range']::-moz-range-thumb {
 
   .year-control input[type='range'] {
     width: 90px;
+  }
+}
+
+/* ── Panel contextual interpretativo ── */
+.contextual-panel {
+  margin-top: 24px;
+  padding: 18px 20px;
+  border-left: 3px solid var(--accent);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 6px;
+  display: grid;
+  gap: 16px;
+}
+
+.contextual-item {
+  display: grid;
+  gap: 6px;
+}
+
+.contextual-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+}
+
+.contextual-item p {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Iconos en KPI ── */
+.metric-icon-slot {
+  width: 32px;
+  height: 32px;
+  margin: 0 auto 8px;
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+  opacity: 0.85;
+}
+
+.kpi-icon {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ── Grid de créditos ── */
+.credits-grid {
+  height: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 20px;
+  padding: 20px;
+  align-content: center;
+}
+
+.credit-card {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 8px;
+  padding: 28px 24px;
+  display: grid;
+  gap: 16px;
+  text-align: center;
+  align-content: start;
+}
+
+.credit-card svg {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
+  color: var(--accent);
+  opacity: 0.9;
+}
+
+.credit-copy {
+  display: grid;
+  gap: 8px;
+}
+
+.credit-copy strong {
+  font: 800 20px Archivo, sans-serif;
+  color: #fff;
+}
+
+.credit-label {
+  display: block;
+  font: 800 10px / 1 Inter, system-ui, sans-serif;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.credit-copy p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ── Responsive: credits grid ── */
+@media (max-width: 980px) {
+  .credits-grid {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+    gap: 12px;
+    padding: 16px;
+  }
+
+  .credit-card {
+    padding: 20px;
+  }
+
+  .contextual-panel {
+    margin-top: 16px;
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .contextual-item p {
+    font-size: 13px;
+  }
+
+  .metric-icon-slot {
+    width: 28px;
+    height: 28px;
+    margin-bottom: 6px;
+  }
+}
+
+@media (max-width: 640px) {
+  .credits-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 12px;
+  }
+
+  .credit-card {
+    padding: 16px;
+  }
+
+  .credit-copy strong {
+    font-size: 17px;
+  }
+
+  .credit-copy p {
+    font-size: 12px;
+  }
+
+  .contextual-panel {
+    margin-top: 12px;
+    padding: 12px 14px;
+    gap: 10px;
+  }
+
+  .contextual-label {
+    font-size: 11px;
+  }
+
+  .contextual-item p {
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .kpi-icon {
+    stroke-width: 1.8;
   }
 }

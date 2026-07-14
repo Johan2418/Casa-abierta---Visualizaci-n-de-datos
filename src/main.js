@@ -16,7 +16,7 @@ import { renderProductionMomentumScatter } from './charts/productionMomentumScat
 import { renderGroupCycleBars } from './charts/groupCycleBars.js';
 import { renderProvinceCompare } from './charts/provinceCompare.js';
 import { renderExplorer } from './charts/explorerDashboard.js';
-import { renderMethodology } from './charts/methodologyPipeline.js';
+import { renderCredits } from './charts/creditsPipeline.js';
 import { renderConclusions } from './charts/conclusions.js';
 
 // En pestañas ocultas el navegador congela requestAnimationFrame; este tick
@@ -134,7 +134,7 @@ async function init() {
       compareHandle = renderProvinceCompare(stage('compare'), rows, summary);
       motion.registerChart('compare', compareHandle);
       motion.registerChart('explorer', renderExplorer(stage('explorer'), rows, summary));
-      motion.registerChart('methodology', renderMethodology(stage('methodology'), summary));
+      motion.registerChart('methodology', renderCredits(stage('methodology')));
       motion.registerChart('conclusions', renderConclusions(stage('conclusions'), dataContext));
     }
 

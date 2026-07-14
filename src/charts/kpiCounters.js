@@ -104,13 +104,53 @@ export function renderHeroStage(container, summary) {
 
 export function renderKpis(container, summary) {
   const kpis = [
-    { label: 'Registros', value: summary.records, suffix: '' },
-    { label: 'Años', value: summary.years.length, suffix: '' },
-    { label: 'Provincias y zonas', value: summary.provinces.length, suffix: '' },
-    { label: 'Cultivos', value: summary.crops.length, suffix: '' },
-    { label: `Producción ${summary.latestYear}`, value: summary.latestProduction, suffix: ' t' },
-    { label: `Superficie cosechada ${summary.latestYear}`, value: summary.latestHarvested, suffix: ' ha' }
+    { label: 'Registros', value: summary.records, suffix: '', icon: 'database' },
+    { label: 'Años', value: summary.years.length, suffix: '', icon: 'calendar' },
+    { label: 'Provincias y zonas', value: summary.provinces.length, suffix: '', icon: 'map' },
+    { label: 'Cultivos', value: summary.crops.length, suffix: '', icon: 'plant' },
+    { label: `Producción ${summary.latestYear}`, value: summary.latestProduction, suffix: ' t', icon: 'harvest' },
+    { label: `Superficie cosechada ${summary.latestYear}`, value: summary.latestHarvested, suffix: ' ha', icon: 'terrain' }
   ];
+
+  function getIconSVG(type) {
+    const icons = {
+      database: `<svg viewBox="0 0 24 24" class="kpi-icon" aria-hidden="true">
+        <ellipse cx="12" cy="4" rx="7" ry="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M5 4v8c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V4" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <ellipse cx="12" cy="14.5" rx="7" ry="2.5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M5 12v6c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5v-6" stroke="currentColor" stroke-width="1.5" fill="none"/>
+      </svg>`,
+      calendar: `<svg viewBox="0 0 24 24" class="kpi-icon" aria-hidden="true">
+        <rect x="4" y="6" width="16" height="14" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M8 2v6M16 2v6M4 10h16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>`,
+      map: `<svg viewBox="0 0 24 24" class="kpi-icon" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+      </svg>`,
+      plant: `<svg viewBox="0 0 24 24" class="kpi-icon" aria-hidden="true">
+        <path d="M12 2v10M12 12c-2.5 0-4.5 1.5-5 3.5M12 12c2.5 0 4.5 1.5 5 3.5M7 20h10M12 20v-4" 
+              stroke="currentColor" stroke-width="1.5" stroke-linecap="round" fill="none"/>
+        <ellipse cx="8" cy="9" rx="2" ry="2.5" fill="currentColor" opacity="0.6"/>
+        <ellipse cx="16" cy="9" rx="2" ry="2.5" fill="currentColor" opacity="0.6"/>
+      </svg>`,
+      harvest: `<svg viewBox="0 0 24 24" class="kpi-icon" aria-hidden="true">
+        <path d="M5 18h14c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v8c0 1.1.9 2 2 2z" 
+              stroke="currentColor" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+        <path d="M8 8v8M12 8v8M16 8v8" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+      </svg>`,
+      terrain: `<svg viewBox="0 0 24 24" class="kpi-icon" aria-hidden="true">
+        <rect x="3" y="5" width="18" height="14" rx="1" stroke="currentColor" stroke-width="1.5" fill="none"/>
+        <line x1="3" y1="9" x2="21" y2="9" stroke="currentColor" stroke-width="1" opacity="0.4"/>
+        <line x1="3" y1="13" x2="21" y2="13" stroke="currentColor" stroke-width="1" opacity="0.4"/>
+        <line x1="7" y1="5" x2="7" y2="19" stroke="currentColor" stroke-width="1" opacity="0.4"/>
+        <line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="1" opacity="0.4"/>
+        <line x1="17" y1="5" x2="17" y2="19" stroke="currentColor" stroke-width="1" opacity="0.4"/>
+      </svg>`
+    };
+    return icons[type] || '';
+  }
 
   container.innerHTML = `
     <div class="kpi-grid">
@@ -118,6 +158,9 @@ export function renderKpis(container, summary) {
         .map(
           (kpi) => `
             <article class="metric-tile">
+              <div class="metric-icon-slot">
+                ${getIconSVG(kpi.icon)}
+              </div>
               <strong data-value="${kpi.value}" data-suffix="${kpi.suffix}">0</strong>
               <span>${kpi.label}</span>
             </article>
