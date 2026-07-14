@@ -10,6 +10,12 @@
   src: url('/fonts/archivo-variable-latin.woff2') format('woff2');
 }
 
+.quiz-join-error {
+  margin-top: 4px !important;
+  color: #ffc1c9 !important;
+  font-size: 13px;
+}
+
 @font-face {
   font-family: 'Inter';
   font-style: normal;
