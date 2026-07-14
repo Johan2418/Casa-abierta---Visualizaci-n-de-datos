@@ -6,9 +6,13 @@
   "scripts": {
     "dev": "npm run build && node scripts/serve-dist.mjs",
     "build": "vite build",
-    "preview": "node scripts/serve-dist.mjs"
+    "preview": "node scripts/serve-dist.mjs",
+    "quiz:seed": "node scripts/generate-quiz-seed.mjs",
+    "quiz:validate": "node scripts/generate-quiz-seed.mjs",
+    "test:quiz": "node scripts/test-quiz-core.mjs"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.110.3",
     "d3": "^7.9.0",
     "gsap": "^3.12.5",
     "papaparse": "^5.4.1",

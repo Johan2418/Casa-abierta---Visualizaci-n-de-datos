@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 import { gsap } from 'gsap';
-import { cropRanking, filterRows, fmt, provinceSummary, sumField, uniqueValues, yearlySeries } from '../data/aggregateData.js';
+import { aggregateYield, cropRanking, filterRows, fmt, provinceSummary, sumField, uniqueValues, yearlySeries } from '../data/aggregateData.js';
 import { motionDuration } from '../animation/deckMotion.js';
 
 const RACE_LIMIT = 8;
@@ -101,7 +101,7 @@ export function renderExplorer(container, rows, summary) {
       { value: sumField(base, 'superficie_cosechada_ha'), format: (v) => `${fmt.compact(v)} ha` },
       { value: uniqueValues(base, 'provincia').length, format: (v) => fmt.number(v) },
       { value: uniqueValues(base, 'cultivo').length, format: (v) => fmt.number(v) },
-      { value: d3.mean(base, (r) => r.rendimiento_t_ha) ?? 0, format: (v) => `${fmt.decimal(v)} t/ha` }
+      { value: aggregateYield(base), format: (v) => `${fmt.decimal(v)} t/ha` }
     ];
 
     kpiNodes.forEach((node, i) => {

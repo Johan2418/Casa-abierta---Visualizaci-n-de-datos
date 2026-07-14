@@ -26,6 +26,17 @@ export function sumField(rows, field) {
   return d3.sum(rows, (row) => row[field] ?? 0);
 }
 
+// Un rendimiento agregado debe calcularse con los totales, no promediando los
+// rendimientos de cada cultivo: un cultivo pequeño no puede pesar igual que
+// uno que ocupa miles de hectáreas.
+export function aggregateYield(rows) {
+  const comparable = rows.filter(
+    (row) => Number.isFinite(row.produccion_t) && Number.isFinite(row.superficie_cosechada_ha) && row.superficie_cosechada_ha > 0
+  );
+  const harvested = sumField(comparable, 'superficie_cosechada_ha');
+  return harvested ? sumField(comparable, 'produccion_t') / harvested : 0;
+}
+
 export function uniqueValues(rows, field) {
   return [...new Set(rows.map((row) => row[field]).filter(Boolean))].sort((a, b) =>
     String(a).localeCompare(String(b), 'es')
@@ -80,7 +91,7 @@ export function cropRanking(rows, year, limit = 10) {
       (items) => ({
         production: sumField(items, 'produccion_t'),
         harvested: sumField(items, 'superficie_cosechada_ha'),
-        yield: d3.mean(items, (row) => row.rendimiento_t_ha)
+        yield: aggregateYield(items)
       }),
       (row) => row.cultivo
     )
@@ -101,7 +112,7 @@ export function provinceSummary(rows, year) {
         crops: uniqueValues(items, 'cultivo').length,
         region: items.find((item) => item.region_natural)?.region_natural ?? 'Sin clasificar',
         diversity: d3.mean(items, (row) => row.indice_diversidad_shannon_normalizado),
-        yield: d3.mean(items, (row) => row.rendimiento_t_ha),
+        yield: aggregateYield(items),
         hhi: d3.mean(items, (row) => row.indice_concentracion_hhi_superficie),
         qualityComplete: items.filter((row) => row.calidad_dato === 'Completo').length / Math.max(items.length, 1)
       }),
@@ -155,7 +166,7 @@ export function yearlySeries(rows, mode, value) {
         year: items[0].anio,
         production: sumField(items, 'produccion_t'),
         harvested: sumField(items, 'superficie_cosechada_ha'),
-        yield: d3.mean(items, (row) => row.rendimiento_t_ha)
+        yield: aggregateYield(items)
       }),
       (row) => row.anio
     )
@@ -194,7 +205,7 @@ export function provinceStats(rows, province, year) {
     province,
     production: sumField(scoped, 'produccion_t'),
     harvested: sumField(scoped, 'superficie_cosechada_ha'),
-    yield: d3.mean(scoped, (row) => row.rendimiento_t_ha) ?? 0,
+    yield: aggregateYield(scoped),
     diversity: d3.mean(scoped, (row) => row.indice_diversidad_shannon_normalizado) ?? 0,
     crops: uniqueValues(scoped, 'cultivo').length,
     topCrop: topCrop?.crop ?? 'Sin dato'
@@ -207,4 +218,53 @@ export function qualityBreakdown(rows) {
     .rollups(rows, (items) => items.length, (row) => row.calidad_dato || 'Sin clasificar')
     .map(([label, count]) => ({ label, count, share: count / total }))
     .sort((a, b) => d3.descending(a.count, b.count));
+}
+
+export function provinceProfile(rows, province, year) {
+  const scoped = rows.filter((row) => row.provincia === province);
+  const selected = scoped.filter((row) => row.anio === Number(year));
+  const years = uniqueValues(scoped, 'anio').sort((a, b) => a - b);
+  const region = selected.find((row) => row.region_natural)?.region_natural ?? scoped.find((row) => row.region_natural)?.region_natural ?? 'Sin clasificar';
+  const production = sumField(selected, 'produccion_t');
+  const harvested = sumField(selected, 'superficie_cosechada_ha');
+  const plantedComparable = selected.filter(
+    (row) => Number.isFinite(row.superficie_plantada_ha) && Number.isFinite(row.superficie_cosechada_ha)
+  );
+  const planted = sumField(plantedComparable, 'superficie_plantada_ha');
+  const harvestedComparable = sumField(plantedComparable, 'superficie_cosechada_ha');
+  const crops = cropRanking(selected, Number(year), 1);
+  const sameRegion = provinceSummary(rows, Number(year)).filter((item) => item.region === region && item.province !== province);
+  const regionalProductionMedian = d3.median(sameRegion, (item) => item.production) ?? 0;
+  const regionalYieldMedian = d3.median(sameRegion, (item) => item.yield) ?? 0;
+  const quality = qualityBreakdown(selected)[0] ?? { label: 'Sin dato', share: 0 };
+  const history = years.map((itemYear) => {
+    const items = scoped.filter((row) => row.anio === itemYear);
+    return {
+      year: itemYear,
+      production: sumField(items, 'produccion_t'),
+      harvested: sumField(items, 'superficie_cosechada_ha'),
+      yield: aggregateYield(items)
+    };
+  });
+
+  return {
+    province,
+    year: Number(year),
+    region,
+    production,
+    harvested,
+    yield: aggregateYield(selected),
+    diversity: d3.mean(selected, (row) => row.indice_diversidad_shannon_normalizado) ?? 0,
+    hhi: d3.mean(selected, (row) => row.indice_concentracion_hhi_superficie) ?? 0,
+    topCrop: crops[0] ?? null,
+    cropCount: uniqueValues(selected, 'cultivo').length,
+    coverage: { firstYear: years[0] ?? null, lastYear: years.at(-1) ?? null, years: years.length },
+    planted,
+    harvestedComparable,
+    reportedGap: planted ? Math.max(0, ((planted - harvestedComparable) / planted) * 100) : null,
+    quality,
+    regionalProductionMedian,
+    regionalYieldMedian,
+    history
+  };
 }

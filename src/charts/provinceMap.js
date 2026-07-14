@@ -1,6 +1,6 @@
 import * as d3 from 'd3';
 import { feature } from 'topojson-client';
-import { fmt } from '../data/aggregateData.js';
+import { fmt, provinceSummary } from '../data/aggregateData.js';
 import { motionDuration } from '../animation/deckMotion.js';
 
 const TOPO_PATH = '/data/ecuador-provincias.topo.json';
@@ -38,9 +38,11 @@ function hideTooltip(tooltip) {
   tooltip.classList.remove('is-visible');
 }
 
-export function renderProvinceMap(container, data, tooltip, topology, year = 2025, onProvinceClick) {
+export function renderProvinceMap(container, rows, tooltip, topology, summary, onProvinceClick) {
   const width = container.clientWidth || 720;
   const height = container.clientHeight || 520;
+  let currentYear = summary.latestYear;
+  let data = provinceSummary(rows, currentYear);
 
   if (!topology) {
     container.innerHTML = `
@@ -52,20 +54,26 @@ export function renderProvinceMap(container, data, tooltip, topology, year = 202
     return { play() {}, reset() {} };
   }
 
-  container.innerHTML = '<svg class="chart-svg" role="img" aria-label="Mapa coroplético del Ecuador por producción provincial"></svg>';
+  container.innerHTML = `
+    <div class="map-controls" data-deck-ignore>
+      <button type="button" class="play-button" id="mapPlayYears" aria-label="Reproducir evolución territorial"><span>▶</span><span>Ver cambio</span></button>
+      <label>Año <input id="mapYear" type="range" min="${summary.years[0]}" max="${summary.latestYear}" step="1" value="${currentYear}" aria-label="Año del mapa" /></label>
+      <strong id="mapYearValue">${currentYear}</strong>
+    </div>
+    <svg class="chart-svg" role="img" aria-label="Mapa coroplético del Ecuador por producción provincial"></svg>`;
   const svg = d3.select(container).select('svg').attr('viewBox', `0 0 ${width} ${height}`);
 
   const features = feature(topology, topology.objects.ecuador).features;
   const galapagos = features.find((f) => normalizeName(f.properties.name) === 'galapagos');
   const mainland = features.filter((f) => f !== galapagos);
 
-  const dataByName = new Map(data.map((d) => [normalizeName(d.province), d]));
+  let dataByName = new Map(data.map((d) => [normalizeName(d.province), d]));
   const matched = mainland.filter((f) => dataByName.has(normalizeName(f.properties.name)));
   const unmatched = data.filter(
     (d) => !features.some((f) => normalizeName(f.properties.name) === normalizeName(d.province))
   );
 
-  const maxProduction = d3.max(matched, (f) => dataByName.get(normalizeName(f.properties.name)).production) || 1;
+  const maxProduction = d3.max(summary.years, (itemYear) => d3.max(provinceSummary(rows, itemYear), (item) => item.production)) || 1;
   // Raíz cuadrada: Guayas produce órdenes de magnitud más que la Amazonía y
   // una escala lineal dejaría medio mapa del mismo color.
   const color = d3.scaleSequentialSqrt([0, maxProduction], d3.interpolateRgb(COLOR_LOW, COLOR_HIGH));
@@ -79,13 +87,13 @@ export function renderProvinceMap(container, data, tooltip, topology, year = 202
   );
   const geoPath = d3.geoPath(projection);
 
-  svg
+  const title = svg
     .append('text')
     .attr('x', width / 2)
     .attr('y', 34)
     .attr('class', 'chart-title')
     .attr('text-anchor', 'middle')
-    .text(`Producción provincial ${year}`);
+    .text(`Producción provincial ${currentYear}`);
 
   // Ordenadas de oeste a este para que la entrada "barra" el país.
   const ordered = [...mainland].sort((a, b) => geoPath.centroid(a)[0] - geoPath.centroid(b)[0]);
@@ -103,7 +111,7 @@ export function renderProvinceMap(container, data, tooltip, topology, year = 202
     .on('mousemove', (event, f) => {
       const d = dataByName.get(normalizeName(f.properties.name));
       const html = d
-        ? `<strong>${d.province}</strong><span>${d.region}</span><span>${fmt.compact(d.production)} t · ${d.crops} cultivos</span><span>Diversidad ${fmt.decimal(d.diversity ?? 0)}</span>${onProvinceClick ? '<span class="tooltip-hint">Clic para comparar →</span>' : ''}`
+        ? `<strong>${d.province}</strong><span>${d.region}</span><span>${fmt.compact(d.production)} t · ${d.crops} cultivos</span><span>Diversidad ${fmt.decimal(d.diversity ?? 0)}</span>${onProvinceClick ? '<span class="tooltip-hint">Clic para radiografía →</span>' : ''}`
         : `<strong>${f.properties.name}</strong><span>Sin datos en el CSV</span>`;
       showTooltip(event, tooltip, html);
       d3.select(event.currentTarget).attr('stroke', '#fff').attr('stroke-width', 1.6).raise();
@@ -221,6 +229,54 @@ export function renderProvinceMap(container, data, tooltip, topology, year = 202
       .text(`Zonas agregadas sin geometría: ${unmatched.map((d) => d.province).join(', ')}`);
   }
 
+  const yearInput = container.querySelector('#mapYear');
+  const yearValue = container.querySelector('#mapYearValue');
+  const playButton = container.querySelector('#mapPlayYears');
+  let playbackTimer = null;
+
+  function updateYear(year, animate = true) {
+    currentYear = Number(year);
+    data = provinceSummary(rows, currentYear);
+    dataByName = new Map(data.map((item) => [normalizeName(item.province), item]));
+    title.text(`Producción provincial ${currentYear}`);
+    yearInput.value = currentYear;
+    yearValue.textContent = currentYear;
+    const selection = animate ? paths.transition().duration(motionDuration(0.55) * 1000) : paths;
+    selection.attr('fill', finalFill);
+  }
+
+  function stopPlayback() {
+    clearTimeout(playbackTimer);
+    playbackTimer = null;
+    playButton.classList.remove('is-playing');
+    playButton.querySelector('span').textContent = '▶';
+  }
+
+  function startPlayback() {
+    stopPlayback();
+    playButton.classList.add('is-playing');
+    playButton.querySelector('span').textContent = '⏸';
+    // La animación siempre cuenta la historia completa, no solo los años que
+    // queden después del valor que estaba seleccionado.
+    let index = 0;
+    const step = () => {
+      updateYear(summary.years[index]);
+      index += 1;
+      if (index >= summary.years.length) {
+        stopPlayback();
+        return;
+      }
+      playbackTimer = setTimeout(step, 600);
+    };
+    step();
+  }
+
+  yearInput.addEventListener('input', () => {
+    stopPlayback();
+    updateYear(yearInput.value);
+  });
+  playButton.addEventListener('click', () => (playbackTimer ? stopPlayback() : startPlayback()));
+
   function play() {
     paths
       .interrupt()
@@ -272,11 +328,12 @@ export function renderProvinceMap(container, data, tooltip, topology, year = 202
   }
 
   function reset() {
+    stopPlayback();
     paths.interrupt().attr('opacity', 0).attr('fill', COLOR_LOW);
     legend.interrupt().attr('opacity', 0);
     inset?.interrupt().attr('opacity', 0);
     halo.interrupt().attr('stroke-opacity', 0);
   }
 
-  return { play, reset };
+  return { play, reset, destroy: stopPlayback };
 }

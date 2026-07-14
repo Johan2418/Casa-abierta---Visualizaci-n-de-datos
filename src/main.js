@@ -1,23 +1,15 @@
 import './styles/main.css';
-import { gsap } from 'gsap';
-import { timerFlush } from 'd3';
-import { loadData } from './data/loadData.js';
-import { cropRanking, getSummary, groupCycleSummary, provinceSummary } from './data/aggregateData.js';
-import { createHorizontalDeck } from './navigation/horizontalDeck.js';
-import { createDeckMotion, motionDuration } from './animation/deckMotion.js';
-import { createAmbientBackground } from './animation/ambient.js';
-import { createAutoAdvance } from './animation/attractMode.js';
-import { buildAppShell, sections } from './sections/sectionRegistry.js';
-import { renderHeroStage, renderKpis } from './charts/kpiCounters.js';
-import { loadEcuadorTopology, renderProvinceMap } from './charts/provinceMap.js';
-import { renderTimeline } from './charts/timelineChart.js';
-import { renderRankingBars } from './charts/rankingBars.js';
-import { renderProductionMomentumScatter } from './charts/productionMomentumScatter.js';
-import { renderGroupCycleBars } from './charts/groupCycleBars.js';
-import { renderProvinceCompare } from './charts/provinceCompare.js';
-import { renderExplorer } from './charts/explorerDashboard.js';
-import { renderCredits } from './charts/creditsPipeline.js';
-import { renderConclusions } from './charts/conclusions.js';
+import { isQuizMobileRoute } from './quiz/router.js';
+
+const loading = document.querySelector('#loading');
+if (isQuizMobileRoute()) {
+  loading?.remove();
+  import('./quiz/mobileQuiz.js').then(({ mountMobileQuiz }) => mountMobileQuiz(document.querySelector('#app')));
+} else {
+  import('./presentation.js').then(({ startPresentation }) => startPresentation());
+}
+
+/*
 
 // En pestañas ocultas el navegador congela requestAnimationFrame; este tick
 // manual evita que la pantalla de carga y las coreografías queden a medias.
@@ -105,18 +97,19 @@ async function init() {
 
     const tooltip = document.querySelector('#tooltip');
     const motion = createDeckMotion();
-    const compareIndex = sections.findIndex((section) => section.id === 'compare');
+    const profileIndex = sections.findIndex((section) => section.id === 'profile');
 
     // Se asignan dentro de renderCharts(); el callback del mapa las referencia
     // por closure y solo se invoca mucho después (al hacer clic), para
     // entonces ya están asignadas.
     let compareHandle;
+    let profileHandle;
     let momentumHandle;
     let deck;
 
-    function goToCompareWith(provinceName) {
-      compareHandle?.selectProvinceA(provinceName);
-      if (compareIndex >= 0) deck?.goTo(compareIndex);
+    function goToProvinceProfile(provinceName) {
+      profileHandle?.selectProvince(provinceName);
+      if (profileIndex >= 0) deck?.goTo(profileIndex);
     }
 
     function renderCharts() {
@@ -124,9 +117,11 @@ async function init() {
       motion.registerChart('numbers', renderKpis(stage('numbers'), summary));
       motion.registerChart(
         'map',
-        renderProvinceMap(stage('map'), provinces, tooltip, topology, summary.latestYear, goToCompareWith)
+        renderProvinceMap(stage('map'), rows, tooltip, topology, summary, goToProvinceProfile)
       );
       motion.registerChart('timeline', renderTimeline(stage('timeline'), rows, summary));
+      profileHandle = renderProvinceProfile(stage('profile'), rows, summary);
+      motion.registerChart('profile', profileHandle);
       motion.registerChart('ranking', renderRankingBars(stage('ranking'), crops, `Top cultivos ${summary.latestYear}`));
       momentumHandle = renderProductionMomentumScatter(stage('diversity'), rows, summary, tooltip);
       motion.registerChart('diversity', momentumHandle);
@@ -155,10 +150,16 @@ async function init() {
 
     createAmbientBackground(document.querySelector('.deck-app'));
     wireFullscreen(document.querySelector('#fullscreenToggle'));
-    createAutoAdvance({
+    const autoAdvance = createAutoAdvance({
       deck,
       toggleButton: document.querySelector('#autoAdvanceToggle'),
       sections
+    });
+    createJuryMode({
+      deck,
+      toggleButton: document.querySelector('#juryToggle'),
+      sections,
+      autoAdvance
     });
 
     dismissLoading(() => motion.start(deck.getIndex()));
@@ -167,7 +168,7 @@ async function init() {
       // Re-render de los charts sensibles al tamaño y re-registro de sus handles.
       motion.registerChart(
         'map',
-        renderProvinceMap(stage('map'), provinces, tooltip, topology, summary.latestYear, goToCompareWith)
+        renderProvinceMap(stage('map'), rows, tooltip, topology, summary, goToProvinceProfile)
       );
       motion.registerChart('ranking', renderRankingBars(stage('ranking'), crops, `Top cultivos ${summary.latestYear}`));
       const momentumState = momentumHandle?.getState?.() ?? { year: summary.latestYear, group: '', focus: 'all' };
@@ -175,11 +176,13 @@ async function init() {
       momentumHandle = renderProductionMomentumScatter(stage('diversity'), rows, summary, tooltip, momentumState);
       motion.registerChart('diversity', momentumHandle);
       motion.registerChart('groups', renderGroupCycleBars(stage('groups'), groups));
+      profileHandle = renderProvinceProfile(stage('profile'), rows, summary);
+      motion.registerChart('profile', profileHandle);
       compareHandle = renderProvinceCompare(stage('compare'), rows, summary);
       motion.registerChart('compare', compareHandle);
 
       const activeId = sections[deck.getIndex()]?.id;
-      if (['map', 'ranking', 'diversity', 'groups', 'compare'].includes(activeId)) {
+      if (['map', 'ranking', 'diversity', 'groups', 'profile', 'compare'].includes(activeId)) {
         motion.replayChart(activeId);
       }
     });
@@ -189,3 +192,4 @@ async function init() {
 }
 
 init();
+*/

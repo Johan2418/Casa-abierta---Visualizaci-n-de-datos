@@ -15,6 +15,7 @@ export function createHorizontalDeck({ root, track, progress, counter, prevButto
   let startX = null;
   let navigationSuspendedUntil = 0;
   let wheelLockedUntil = 0;
+  let route = null;
 
   const themeState = { ...THEMES[slides[0]?.dataset.theme ?? 'green'] };
 
@@ -98,8 +99,10 @@ export function createHorizontalDeck({ root, track, progress, counter, prevButto
       counter.textContent = `${String(index + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
     }
     progress.style.setProperty('--progress', `${((index + 1) / slides.length) * 100}%`);
-    prevButton.disabled = index === 0;
-    nextButton.disabled = index === slides.length - 1;
+    const routePosition = route ? route.indexOf(index) : index;
+    const routeLength = route ? route.length : slides.length;
+    prevButton.disabled = routePosition <= 0;
+    nextButton.disabled = routePosition >= routeLength - 1;
     root.dataset.theme = slides[index].dataset.theme ?? 'green';
     applyTheme(slides[index].dataset.theme ?? 'green', prevIndex !== null);
 
@@ -115,11 +118,15 @@ export function createHorizontalDeck({ root, track, progress, counter, prevButto
   }
 
   function next() {
-    goTo(index + 1);
+    if (!route) return goTo(index + 1);
+    const position = route.indexOf(index);
+    goTo(route[Math.min(route.length - 1, Math.max(0, position + 1))]);
   }
 
   function prev() {
-    goTo(index - 1);
+    if (!route) return goTo(index - 1);
+    const position = route.indexOf(index);
+    goTo(route[Math.max(0, position - 1)]);
   }
 
   prevButton.addEventListener('click', prev);
@@ -212,5 +219,11 @@ export function createHorizontalDeck({ root, track, progress, counter, prevButto
 
   update();
 
-  return { goTo, next, prev, getIndex: () => index, getSlideCount: () => slides.length };
+  function setRoute(nextRoute) {
+    route = Array.isArray(nextRoute) && nextRoute.length ? [...new Set(nextRoute)].filter((item) => item >= 0 && item < slides.length) : null;
+    if (route && !route.includes(index)) goTo(route[0]);
+    else update();
+  }
+
+  return { goTo, next, prev, setRoute, getIndex: () => index, getSlideCount: () => slides.length };
 }

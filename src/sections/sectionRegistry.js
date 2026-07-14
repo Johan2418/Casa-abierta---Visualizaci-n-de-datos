@@ -59,6 +59,18 @@ export const sections = [
     }
   },
   {
+    id: 'profile',
+    theme: 'violet',
+    title: 'Radiografía provincial',
+    subtitle: 'Elige una provincia: los datos construyen su historia en tiempo real.',
+    body: 'Compara su escala y rendimiento contra la mediana regional, identifica su cultivo líder y verifica la cobertura que respalda cada cifra.',
+    insight: () => 'Un dato visual vale más cuando también se puede explicar y comprobar',
+    contextualHelp: {
+      what: 'Esta ficha integra producción, rendimiento agregado, diversidad, concentración y cobertura histórica de una provincia para el año que selecciones.',
+      how: 'La referencia no es una predicción: es la mediana de las demás provincias de la misma región natural. La brecha plantada/cosechada solo usa registros que contienen ambas superficies.'
+    }
+  },
+  {
     id: 'ranking',
     theme: 'green',
     title: 'Cultivos estrella',
@@ -154,6 +166,18 @@ export const sections = [
       what: 'Cuatro síntesis visuales que cierran la narrativa: concentración geográfica, evolución temporal, diversidad de cultivos y tendencias recientes.',
       how: 'Cada conclusión se basa en datos agregados directamente del CSV. No son predicciones ni recomendaciones políticas. Son observaciones sobre patrones visibles en el registro histórico. Para profundizar, vuelve a las secciones anteriores y explora filtros específicos.'
     }
+  },
+  {
+    id: 'quiz',
+    theme: 'cyan',
+    title: 'Quiz en vivo',
+    subtitle: 'Escanea, responde y entra al ranking de Sembrando Datos.',
+    body: 'Una ronda interactiva de preguntas construidas a partir de los datos que acabas de explorar.',
+    insight: () => '8 preguntas aleatorias · 20 segundos por respuesta',
+    contextualHelp: {
+      what: 'Todas las preguntas se construyen desde el mismo dataset de la presentación: producción, provincias, cultivos, diversidad y metodología.',
+      how: 'El código QR abre el control para teléfonos. La pantalla principal muestra la pregunta; cada participante responde con la opción A, B, C o D y el ranking se actualiza al terminar la ronda.'
+    }
   }
 ];
 
@@ -177,6 +201,9 @@ export function buildAppShell(ctx) {
         <div class="brand">Sembrando Datos</div>
         <div class="topbar-meta">Ecuador · Agroproducción · 2002-2025</div>
         <div class="topbar-actions">
+          <button class="jury-toggle" id="juryToggle" type="button" aria-pressed="false" aria-label="Activar modo jurado">
+            <span class="jury-dot"></span><span>Modo jurado</span>
+          </button>
           <button class="auto-advance-toggle" id="autoAdvanceToggle" type="button" aria-label="Activar autoavance" aria-pressed="false">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path class="auto-icon-play" d="M8 5v14l11-7z" />

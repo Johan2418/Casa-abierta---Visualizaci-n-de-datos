@@ -4,7 +4,7 @@ import { motionDuration } from '../animation/deckMotion.js';
 
 // Se genera 100% local (sin llamadas de red): qrcode-generator dibuja el SVG
 // a partir de la URL, ideal para un stand sin conexión garantizada.
-export function renderQrCode(container, url) {
+export function renderQrCode(container, url, content = {}) {
   const qr = qrcode(0, 'M');
   qr.addData(url);
   qr.make();
@@ -14,9 +14,9 @@ export function renderQrCode(container, url) {
     <div class="qr-card">
       <div class="qr-art">${svgMarkup}</div>
       <div class="qr-copy">
-        <span>Explora la fuente</span>
-        <strong>Escanea para ver los datos originales</strong>
-        <p>${url}</p>
+        <span>${content.eyebrow ?? 'Explora la fuente'}</span>
+        <strong>${content.title ?? 'Escanea para ver los datos originales'}</strong>
+        <p>${content.urlLabel ?? url}</p>
       </div>
     </div>
   `;
